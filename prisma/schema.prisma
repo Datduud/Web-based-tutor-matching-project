@@ -1,0 +1,106 @@
+datasource db {
+  provider     = "mongodb"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  TUTOR
+}
+
+model User {
+  id                        String            @id @map("_id")
+  name                      String
+  imageUrl                  String
+  email                     String
+  description               String?
+  role                      Role?
+  costPerHour               Float?
+  qualifications            Qualification[]
+  subjects                  UsersSubjects[]
+  AvailableTime             AvailableTime[]
+  learningSessionsAsTutor   LearningSession[] @relation("LearningSessionTutor")
+  learningSessionsAsStudent LearningSession[] @relation("LearningSessionStudent")
+  reviewSent                Review[]          @relation("ReviewSender")
+  reviewRecieve             Review[]          @relation("ReviewReceiver")
+}
+
+model Qualification {
+  id                 String @id @default(uuid()) @map("_id")
+  qualification_name String
+  description        String
+  imageUrl           String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Subject {
+  id    String          @id @default(uuid()) @map("_id")
+  name  String
+  users UsersSubjects[]
+}
+
+model UsersSubjects {
+  id        String  @id @default(uuid()) @map("_id")
+  userId    String
+  subjectId String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subjectId])
+}
+
+model AvailableTime {
+  id        String @id @default(uuid()) @map("_id")
+  weekDay   Int
+  startTime String
+  endTime   String
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+enum SessionStatus {
+  PROCESSING
+  REJECTED
+  INPROGRESS
+  COMPLETED
+}
+
+model LearningSession {
+  id            String        @id @default(uuid()) @map("_id")
+  tutorId       String
+  tutor         User          @relation("LearningSessionTutor", fields: [tutorId], references: [id])
+  studentId     String
+  student       User          @relation("LearningSessionStudent", fields: [studentId], references: [id])
+  status        SessionStatus
+  writtenReview Boolean       @default(false)
+  date          String
+
+  @@index([tutorId])
+  @@index([studentId])
+}
+
+model Review {
+  id          String   @id @default(uuid()) @map("_id")
+  receiverId  String
+  receiver    User     @relation("ReviewReceiver", fields: [receiverId], references: [id])
+  senderId    String
+  sender      User     @relation("ReviewSender", fields: [senderId], references: [id])
+  rating      Int
+  description String
+  dateCreated DateTime @default(now())
+
+  @@index([receiverId])
+  @@index([senderId])
+}
